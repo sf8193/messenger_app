@@ -29,6 +29,7 @@
     "id": "5",
     "ip_address": "127.0.0.1",
     "port": "60005"
-  }
-
+  },
+  "network_delay_min": 100,
+  "network_delay_max": 200
 }

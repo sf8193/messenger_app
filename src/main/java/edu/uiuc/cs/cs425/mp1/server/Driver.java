@@ -1,21 +1,32 @@
 package edu.uiuc.cs.cs425.mp1.server;
 
-import edu.uiuc.cs.cs425.mp1.config.Configuration;
+import edu.uiuc.cs.cs425.mp1.data.Message;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Driver {
 
-    private static final Logger logger = LogManager.getLogger();
+    private ConcurrentLinkedQueue<Message> messageQueue;
+    private int id;
+    private String ip;
+    private int port;
 
-    public static void main(String[] args) {
-        try {
-            Configuration.INSTANCE.readConfigurationFile("/Users/arvind/Documents/College_2015/current_classes/cs425/mp1/configuration_file.json");
-        } catch(Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex);
-        }
+    public Driver(int id, String ip, int port) {
+        this.id = id;
+        this.ip = ip;
+        this.port = port;
+        messageQueue = new ConcurrentLinkedQueue<>();
     }
 
+    public void start() {
+        // Start listener
+
+        // Create socket connections with servers with higher ids.
+
+        //
+    }
+
+    public void takeCommands() {
+
+    }
 }

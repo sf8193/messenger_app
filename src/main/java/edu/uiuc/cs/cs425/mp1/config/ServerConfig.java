@@ -22,7 +22,7 @@ public class ServerConfig {
     private int port;
 
     // Server socket.
-    private transient Socket socket = null;
+    private volatile transient Socket socket = null;
 
     public ServerConfig() {}
 

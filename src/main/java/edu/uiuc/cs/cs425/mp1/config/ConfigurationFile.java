@@ -12,9 +12,14 @@ public class ConfigurationFile {
     private ServerConfig[] serverConfigs;
 
     // Configuration of single sequencer server.
-    // @SerializedName("sequencer_configuration")
-    // Note: Serialization disabled until sequencer implementation.
-    private transient ServerConfig sequencerConfig = null;
+     @SerializedName("sequencer_configuration")
+    private ServerConfig sequencerConfig = null;
+
+    @SerializedName("network_delay_min")
+    private int networkDelayMin;
+
+    @SerializedName("network_delay_max")
+    private int networkDelayMax;
 
     public ServerConfig[] getServerConfigs() {
         return serverConfigs;
@@ -23,5 +28,6 @@ public class ConfigurationFile {
     public ServerConfig getSequencerConfig() {
         return sequencerConfig;
     }
+
 
 }
