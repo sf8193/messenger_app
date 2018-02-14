@@ -21,16 +21,12 @@ public class ServerConfig {
     @SerializedName("port")
     private int port;
 
-    // Server socket.
-    private volatile transient Socket socket = null;
-
     public ServerConfig() {}
 
     public ServerConfig(ServerConfig other) {
         id = other.id;
         IPAddress = other.IPAddress;
         port = other.port;
-        socket = other.socket;
     }
 
     public int getId() {
@@ -45,7 +41,4 @@ public class ServerConfig {
         return port;
     }
 
-    public Socket getSocket() {
-        return socket;
-    }
 }

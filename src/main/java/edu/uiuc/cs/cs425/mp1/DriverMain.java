@@ -26,20 +26,10 @@ public class DriverMain {
             // Read configuration. -- "/Users/arvind/Documents/College_2015/current_classes/cs425/mp1/configuration_file.json"
             Configuration.INSTANCE.readConfigurationFile(parserModule.getConfigPath());
 
-            // Wait on user prompt to start.
-            promptEnterKey();
-
-
         } catch(Exception ex) {
             ex.printStackTrace();
             logger.error(ex);
         }
-    }
-
-    public static void promptEnterKey() {
-        System.out.println("Press 'ENTER' to continue...");
-        Scanner scanner = new Scanner(System.in);
-        scanner.nextLine();
     }
 
 }
