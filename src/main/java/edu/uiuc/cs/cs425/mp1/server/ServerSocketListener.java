@@ -48,7 +48,7 @@ public class ServerSocketListener implements Runnable {
                 SynchronizedSocket syncSocket = OperationalStore.INSTANCE.getSocket(remoteId);
                 syncSocket.setConnection(clientSocket);
                 Thread newClientSocketListener = new Thread(
-                        new ClientSocketListener(syncSocket, remoteId, semaphore));
+                        new ClientSocketListener(syncSocket, remoteId, this.id, semaphore));
                 clientSocketListeners.add(newClientSocketListener);
                 newClientSocketListener.start();
                 threadCount++;

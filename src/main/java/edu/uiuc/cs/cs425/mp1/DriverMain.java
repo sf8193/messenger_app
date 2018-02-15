@@ -31,5 +31,27 @@ public class DriverMain {
             logger.error(ex);
         }
     }
+    public static void promptEnterKey() {
+        System.out.println("Press 'ENTER' to continue...");
+        Scanner scanner = new Scanner(System.in);
+        scanner.nextLine();
+    }
 
+    public static boolean checkForMessage(){
+
+    }
+
+    public static void listenForInput(){
+
+        Scanner scanner = new Scanner(System.in);
+        String input;
+        while(true){
+            if(input = scanner.nextLine()){
+                unicastSend(input);
+            }
+            if(checkForMessage()){
+                unicastReceive();
+            }
+        }
+    }
 }

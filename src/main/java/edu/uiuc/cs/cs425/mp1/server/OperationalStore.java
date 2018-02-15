@@ -15,7 +15,7 @@ public enum OperationalStore {
     // Map of socket ids to clients sockets.
     private final ConcurrentHashMap<Integer, SynchronizedSocket> socketMap = new ConcurrentHashMap<>();
     // Message holdback queue.
-    public final ConcurrentLinkedQueue<Message> queue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<Message> queue = new ConcurrentLinkedQueue<>();
 
     public SynchronizedSocket getSocket(int id) {
         return socketMap.get(id);
@@ -28,6 +28,10 @@ public enum OperationalStore {
                             serverConfig.getId(), serverConfig.getIPAddress(), serverConfig.getPort());
             socketMap.put(serverConfig.getId(), clientSocket);
         }
+    }
+
+    public void pushToQueue(Message m){
+        queue.add(m);
     }
 
 
