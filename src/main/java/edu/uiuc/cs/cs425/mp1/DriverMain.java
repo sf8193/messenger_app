@@ -2,7 +2,7 @@ package edu.uiuc.cs.cs425.mp1;
 
 import com.beust.jcommander.JCommander;
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
-
+import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,10 +37,6 @@ public class DriverMain {
         scanner.nextLine();
     }
 
-    public static boolean checkForMessage(){
-
-    }
-
     public static void listenForInput(){
 
         Scanner scanner = new Scanner(System.in);
@@ -49,7 +45,7 @@ public class DriverMain {
             if(input = scanner.nextLine()){
                 unicastSend(input);
             }
-            if(checkForMessage()){
+            if(OperationalStore.INSTANCE.checkForMessage()){
                 unicastReceive();
             }
         }

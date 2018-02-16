@@ -93,7 +93,7 @@ public class ClientSocketListener implements Runnable {
         try {
             clientSocket.close();
         } catch (IOException e) {
-            logger.error("could not close socket properly", e);
+            logger.error("could not close client socket properly", e);
         }
     }
 }
