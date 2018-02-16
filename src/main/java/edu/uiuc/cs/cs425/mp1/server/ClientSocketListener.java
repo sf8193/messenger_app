@@ -45,7 +45,6 @@ public class ClientSocketListener implements Runnable {
      *
      */
 
-    // while data in output_stream
     @Override
     public void run() {
 
@@ -63,7 +62,7 @@ public class ClientSocketListener implements Runnable {
             ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream();
 
             Message incomingMessage;
-
+            //grab messages coming in through stream and push to buffer to be read
             while( incomingMessage = (Message) ois.readObject()){
                 OperationalStore.INSTANCE.pushToQueue(incomingMessage);
             }
@@ -75,21 +74,21 @@ public class ClientSocketListener implements Runnable {
                 stop();
                 return;
             }else
-            //this is for the objectinputstream check
+            //this is for the objectinputstream check --- not sure if this check is necesarry depending on java internals
             throw new RuntimeException("No input stream to receive");
         }
         stop();
     }
-
+    //clean exit
     private void stop() {
 
-
+        //release semaphore
         try {
             this.semaphore.release();
         } catch (InterruptedException intEx) {
             logger.error("Could not release permit", intEx);
         }
-
+        //close socket
         try {
             clientSocket.close();
         } catch (IOException e) {

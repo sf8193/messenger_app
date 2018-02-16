@@ -37,6 +37,10 @@ public class DriverMain {
         scanner.nextLine();
     }
 
+    /*
+    TODO: unicastSEND, unicastRecieve functions
+    Listens to input on each machine from command line and checks if messages need to be received for specific machine
+     */
     public static void listenForInput(){
 
         Scanner scanner = new Scanner(System.in);

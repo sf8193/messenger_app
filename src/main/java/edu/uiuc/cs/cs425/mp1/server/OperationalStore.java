@@ -38,7 +38,7 @@ public enum OperationalStore {
     public void pushToQueue(Message m){
         queue.add(m);
     }
-
+    //check if there are any messages needing to be sent
     public boolean checkForMessage(){
         return queue.isEmpty();
     }
