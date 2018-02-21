@@ -1,14 +1,18 @@
 package edu.uiuc.cs.cs425.mp1.server;
 
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
+import edu.uiuc.cs.cs425.mp1.data.Message;
 import edu.uiuc.cs.cs425.mp1.util.ServerUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Scanner;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Main driver program for setting up sockets, processing user inputs, and spawning send threads.
@@ -20,7 +24,6 @@ public class Driver {
     private int id;
     private String ip;
     private int port;
-    private Thread listener;
 
     private static final int CONNECTION_RETRY_LIMIT = 3;
     private static final long RETRY_TIMER_MILLIS = 1000;
@@ -33,8 +36,12 @@ public class Driver {
 
     public void start() {
         // Start server socket listener.
-        listener = new Thread(new ServerSocketListener(id, port));
+        Thread listener = new Thread(new ServerSocketListener(id, port));
         listener.start();
+
+        // Start deliverer
+        Thread deliverer = new Thread(new Deliverer());
+        deliverer.start();
 
         // CONTINUE on ENTER (for waiting until all processes' listeners are running)
         promptEnterKey();
@@ -43,7 +50,12 @@ public class Driver {
         makeSocketConnections();
 
         // Loop and process user input
-        processUserInput();
+        listenForInput();
+
+        // Close threads
+        listener.interrupt();
+        deliverer.interrupt();
+        OperationalStore.INSTANCE.pushToBlockingQueue(null);
 
     }
 
@@ -54,7 +66,10 @@ public class Driver {
             boolean successfulConnection = tryWithRetries(new ConnectionAttempt() {
                 @Override
                 public void connect() throws IOException {
-                    OperationalStore.INSTANCE.getSocket(id).connect();
+                    OperationalStore.INSTANCE.connect(id);
+                    SynchronizedSocket socket = OperationalStore.INSTANCE.getSocket(id);
+                    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                    oos.writeObject(Message.getIdentifierMessage(id));
                 }
 
                 @Override
@@ -88,18 +103,31 @@ public class Driver {
         int id();
     }
 
-    public static void promptEnterKey() {
+    private static void promptEnterKey() {
         System.out.println("Press 'ENTER' to continue...");
         Scanner scanner = new Scanner(System.in);
         scanner.nextLine();
     }
 
-    /**
-     * Loop and process user input for 'send' and 'recieve' commands.
-     * TODO(sfelde2)
-     */
-    public void processUserInput() {
+    private void listenForInput(){
+        Scanner scanner = new Scanner(System.in);
+        String input = null;
+        while ((input = scanner.nextLine()) != null){
+            unicastSend(input);
+        }
+    }
 
+    private final Pattern msgPattern = Pattern.compile("^([0-9]) (.*)$");
+    private void unicastSend(String input) {
+        Matcher m = msgPattern.matcher(input);
+        if (!m.matches()) {
+            System.out.println("Incorrect syntax, could not send message.");
+            return;
+        }
+        int destId = Integer.parseInt(m.group(1));
+        long networkDelay = 0;
+        Message message = Message.getMessage(m.group(2), id, destId, networkDelay);
+        new Thread(new Sender(message)).start();
     }
 
 }

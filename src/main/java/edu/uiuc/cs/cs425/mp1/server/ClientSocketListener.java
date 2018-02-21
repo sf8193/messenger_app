@@ -2,7 +2,11 @@ package edu.uiuc.cs.cs425.mp1.server;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
+
 import edu.uiuc.cs.cs425.mp1.data.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,11 +16,10 @@ public class ClientSocketListener implements Runnable {
 
     private static final Logger logger = LogManager.getLogger(ClientSocketListener.class.getName());
 
-
     private Semaphore semaphore;
     private SynchronizedSocket clientSocket;
-    int destId;
-    int myId;
+    private int myId;
+    private int destId;
     private Thread runningThread = null;
 
 
@@ -28,23 +31,18 @@ public class ClientSocketListener implements Runnable {
     }
 
     /**
-     * TODO(sfelde2): Implement socket listeners
      * Client socket listeners should:
      *  - Loop on the input stream
      *  - Process messages using an ObjectInputStream with {@link edu.uiuc.cs.cs425.mp1.data.Message}
      *  - Robustly handle failures ie.
      *      - If there is an exception (eg. due to broken stream/closed socket) then:
      *          - If the Thread interrupted flag has been thrown, cleanly exit
-     *          - If not, then if the socket was interrupted
+     *          - If not, then if the socket was broken/closed
+     *              - If myId < destId, reopen the connection.
+     *              - If myId > destId, cleanly exit.
      *  - Receive messages and push to the message queue.
      *
-     *  Clean exit should:
-     *   - Close socket
-     *   - Release semaphore
-     *   - etc.
-     *
      */
-
     @Override
     public void run() {
 
@@ -55,40 +53,78 @@ public class ClientSocketListener implements Runnable {
         try {
             this.semaphore.acquire();
         } catch (InterruptedException e) {
-            logger.error("could not acquire permit for reading message", e);
+            String msg = "Could not acquire permit for reading message";
+            logger.error(msg, e);
+            throw new RuntimeException(msg, e);
         }
 
         try {
-            ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream();
+            ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 
             Message incomingMessage;
-            //grab messages coming in through stream and push to buffer to be read
-            while( incomingMessage = (Message) ois.readObject()){
-                OperationalStore.INSTANCE.pushToQueue(incomingMessage);
+            // Grab messages coming in through stream and push to buffer to be read.
+            while((incomingMessage = (Message) ois.readObject()) != null){
+                OperationalStore.INSTANCE.pushToBlockingQueue(incomingMessage);
             }
-        }
-        catch(IOException IOex ){
+        } catch (IOException ioEx ){
             // if thread is interrupted while reading
             if(this.runningThread.isInterrupted()){
-                System.out.println("Thread was interrupted");
+                logger.warn("Thread was interrupted");
                 stop();
                 return;
-            }else
-            //this is for the objectinputstream check --- not sure if this check is necesarry depending on java internals
-            throw new RuntimeException("No input stream to receive");
+            } else {
+                // Logic for re-opening connection.
+                /*
+                    To prevent both processes from simultaneously attempting to re-connect, we universally decide that
+                    the lower-numbered process is required for re-connecting. The higher-numbered process should
+                    simply exit and establish the new connection.
+                 */
+                if (myId < destId) {
+                    reconnectSocket();
+                } else {
+                    // if (myId > destId): Close cleanly, and accept new connection
+                    logger.warn("Thread was closed due to broken socket", ioEx);
+                    stop();
+                    return;
+                }
+            }
+        } catch (ClassNotFoundException classEx) {
+
+            String msg = "Unable to read object from input stream";
+            logger.error(msg, classEx);
+            throw new RuntimeException(msg, classEx);
         }
         stop();
     }
-    //clean exit
+
+    /**
+     * Reconnect to destination process.
+     */
+    private void reconnectSocket() {
+        // Hacky - plz remove.
+        try { Thread.sleep(2000); } catch (InterruptedException e) {}
+
+        // Re-connect.
+        try {
+            OperationalStore.INSTANCE.getSocket(destId).connect();
+        } catch (IOException ioEx) {
+            String msg = "Unable to re-connect to process " + destId;
+            logger.error(msg, ioEx);
+            throw new RuntimeException(msg + " yer fucked", ioEx);
+        }
+    }
+
+    /**
+     * Clean exit
+     *  - Release semaphore.
+     *  - Close socket.
+     */
     private void stop() {
 
-        //release semaphore
-        try {
-            this.semaphore.release();
-        } catch (InterruptedException intEx) {
-            logger.error("Could not release permit", intEx);
-        }
-        //close socket
+        // Release parent thread's semaphore.
+        this.semaphore.release();
+
+        // Close socket.
         try {
             clientSocket.close();
         } catch (IOException e) {

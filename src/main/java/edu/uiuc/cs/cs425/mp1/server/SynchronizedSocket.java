@@ -51,7 +51,6 @@ public class SynchronizedSocket {
         return socket.getOutputStream();
     }
 
-
     // Connection methods
 
     /**
@@ -80,6 +79,7 @@ public class SynchronizedSocket {
      */
     public synchronized boolean connect() throws IOException {
         if (empty()) {
+            System.out.println("Connecting to id: "+ destId);
             socket = new Socket(host, port);
             return true;
         }

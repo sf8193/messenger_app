@@ -15,17 +15,26 @@ import java.util.concurrent.ConcurrentHashMap;
  * Configuration singleton for entire process.
  * Maintains:
  *  - In-memory table of configuration file process entries keyed by id
+ *  - Sorted list
+ * All maintained data is immutable after invocation of {@link Configuration#readConfigurationFile}
  */
 public enum Configuration {
     INSTANCE;
 
     // Map of process ids to server process configurations.
-    private final ConcurrentHashMap<Integer, ServerConfig> serverConfigs = new ConcurrentHashMap<>();
+    private final Map<Integer, ServerConfig> serverConfigs = new ConcurrentHashMap<>();
     // Immutable and sorted (ascending) list of process ids.
     private volatile List<Integer> sortedIds;
     // Configuration for sequencer process.
     private volatile ServerConfig sequencerConfig;
+    // Minimum message delay
+    long minDelay;
+    // Maximum message delay;
+    long maxDelay;
 
+    /**
+     * Parse configuration file into memory.
+     */
     public void readConfigurationFile(String configFilePath) throws IOException {
         String fullPath = Paths.get(configFilePath).toAbsolutePath().toString();
         try(BufferedReader br = new BufferedReader(new FileReader(fullPath))) {
@@ -36,6 +45,9 @@ public enum Configuration {
         OperationalStore.INSTANCE.loadSocketMap();
     }
 
+    /**
+     * Read all server configs
+     */
     public Collection<ServerConfig> getServerConfigs() {
         return serverConfigs.values();
     }
@@ -45,6 +57,14 @@ public enum Configuration {
     }
 
     public List<Integer> getSortedIds() { return sortedIds; }
+
+    public long getMinDelay() {
+        return minDelay;
+    }
+
+    public long getMaxDelay() {
+        return maxDelay;
+    }
 
     public int getId(String host, int port) {
         for (Map.Entry<Integer, ServerConfig> entry: serverConfigs.entrySet()) {
@@ -58,6 +78,9 @@ public enum Configuration {
     }
 
     private void loadConfigurationFile(ConfigurationFile configFile) {
+
+        minDelay = configFile.getMinDelay();
+        maxDelay = configFile.getMaxDelay();
 
         List<Integer> ids = new ArrayList<>();
 

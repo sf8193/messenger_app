@@ -2,6 +2,8 @@ package edu.uiuc.cs.cs425.mp1;
 
 import com.beust.jcommander.JCommander;
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
+import edu.uiuc.cs.cs425.mp1.config.ServerConfig;
+import edu.uiuc.cs.cs425.mp1.server.Driver;
 import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,32 +28,15 @@ public class DriverMain {
             // Read configuration. -- "/Users/arvind/Documents/College_2015/current_classes/cs425/mp1/configuration_file.json"
             Configuration.INSTANCE.readConfigurationFile(parserModule.getConfigPath());
 
+            int id = parserModule.getId();
+            ServerConfig config = Configuration.INSTANCE.getServerConfig(id);
+            String ip = config.getIPAddress();
+            int port = config.getPort();
+            new Driver(id, ip, port).start();
         } catch(Exception ex) {
             ex.printStackTrace();
             logger.error(ex);
         }
     }
-    public static void promptEnterKey() {
-        System.out.println("Press 'ENTER' to continue...");
-        Scanner scanner = new Scanner(System.in);
-        scanner.nextLine();
-    }
 
-    /*
-    TODO: unicastSEND, unicastRecieve functions
-    Listens to input on each machine from command line and checks if messages need to be received for specific machine
-     */
-    public static void listenForInput(){
-
-        Scanner scanner = new Scanner(System.in);
-        String input;
-        while(true){
-            if(input = scanner.nextLine()){
-                unicastSend(input);
-            }
-            if(OperationalStore.INSTANCE.checkForMessage()){
-                unicastReceive();
-            }
-        }
-    }
 }

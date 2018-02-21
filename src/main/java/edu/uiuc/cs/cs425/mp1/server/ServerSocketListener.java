@@ -1,10 +1,12 @@
 package edu.uiuc.cs.cs425.mp1.server;
 
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
+import edu.uiuc.cs.cs425.mp1.data.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -17,41 +19,52 @@ import java.util.concurrent.Semaphore;
  */
 public class ServerSocketListener implements Runnable {
 
-    private static final Logger logger = LogManager.getLogger();
+    // Logger using log4j2.
+    private static final Logger logger = LogManager.getLogger(ServerSocketListener.class.getName());
 
+    // Process id.
     private int id;
+    // Port for server bind.
     private int serverPort;
-    protected ServerSocket serverSocket = null;
-    protected Thread runningThread = null;
-    private List<Thread> clientSocketListeners = new ArrayList<>();
+    // Server socket.
+    private ServerSocket serverSocket = null;
+    // Reference to current thread.
+    private Thread runningThread = null;
+    // List of client socket listeners.
+    private volatile List<Thread> clientSocketListeners = new ArrayList<>();
+    // Semaphore to await clean exit of all client socket listeners.
     private final Semaphore semaphore = new Semaphore(0);
-    private int threadCount = 0;
 
     public ServerSocketListener(int id, int port) {
         this.id = id;
         this.serverPort = port;
     }
 
+    /**
+     * Main server run-loop for accepting client connections.
+     * Accepted connections are handled in a new thread.
+     * Accepted connections may be immediately rejected if:
+     *  - The accepted connection
+     */
     @Override
     public void run() {
         synchronized(this) {
             this.runningThread = Thread.currentThread();
         }
-
+        openServerSocket();
         while (!this.runningThread.isInterrupted()) {
             Socket clientSocket = null;
             try {
                 clientSocket = this.serverSocket.accept();
-                String host = clientSocket.getInetAddress().getHostName();
-                int remotePort = clientSocket.getPort();
-                int remoteId = Configuration.INSTANCE.getId(host, remotePort);
+                ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
+                Message identifier = (Message) objectInputStream.readObject();
+                int remoteId = identifier.getSourceId();
                 SynchronizedSocket syncSocket = OperationalStore.INSTANCE.getSocket(remoteId);
                 syncSocket.setConnection(clientSocket);
                 Thread newClientSocketListener = new Thread(
                         new ClientSocketListener(syncSocket, remoteId, this.id, semaphore));
                 clientSocketListeners.add(newClientSocketListener);
                 newClientSocketListener.start();
-                threadCount++;
             } catch (IOException ioEx) {
                 if (this.runningThread.isInterrupted()) {
                     System.out.println("Main listener stopped. Process is no longer accepting connections.");
@@ -59,8 +72,8 @@ public class ServerSocketListener implements Runnable {
                     return;
                 }
                 throw new RuntimeException("Error accepting client connection", ioEx);
-            } catch (NoSuchElementException ex) {
-                logger.error("Unidentifiable remote process attempted to connect", ex);
+            } catch (ClassNotFoundException e) {
+                logger.error("Unidentifiable remote process attempted to connect", e);
                 try {
                     clientSocket.close();
                 } catch (IOException ioEx) {
@@ -72,6 +85,7 @@ public class ServerSocketListener implements Runnable {
     }
 
     private void stop() {
+        int threadCount = clientSocketListeners.size();
         for (Thread thread : clientSocketListeners) {
             thread.interrupt();
         }
@@ -90,6 +104,7 @@ public class ServerSocketListener implements Runnable {
     public void openServerSocket() {
         try {
             this.serverSocket = new ServerSocket(this.serverPort);
+            logger.debug("Current port is: " + this.serverSocket.getLocalPort());
         } catch (IOException ioEx) {
             throw new RuntimeException("Cannot open port " + this.serverPort, ioEx);
         }

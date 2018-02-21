@@ -9,25 +9,12 @@
       "id": "1",
       "ip_address": "127.0.0.1",
       "port": "60001"
-    },
-    {
-      "id": "2",
-      "ip_address": "127.0.0.1",
-      "port": "60002"
-    },
-    {
-      "id": "3",
-      "ip_address": "127.0.0.1",
-      "port": "60003"
-    },
-    {
-      "id": "4",
-      "ip_address": "127.0.0.1",
-      "port": "60004"
     }],
   "sequencer_configuration": {
     "id": "5",
     "ip_address": "127.0.0.1",
     "port": "60005"
-  }
+  },
+  "min_delay": 1000,
+  "max_delay": 5000
 }
