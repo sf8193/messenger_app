@@ -5,6 +5,9 @@ import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.config.ServerConfig;
 import edu.uiuc.cs.cs425.mp1.server.Driver;
 import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
+import edu.uiuc.cs.cs425.mp1.server.delivery.BasicDeliverer;
+import edu.uiuc.cs.cs425.mp1.server.delivery.Deliverer;
+import edu.uiuc.cs.cs425.mp1.server.delivery.FIFODeliverer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,7 +35,18 @@ public class DriverMain {
             ServerConfig config = Configuration.INSTANCE.getServerConfig(id);
             String ip = config.getIPAddress();
             int port = config.getPort();
-            new Driver(id, ip, port).start();
+
+            Deliverer deliverer;
+
+            if (parserModule.getMulticastProtocol().equals("FIFO")) {
+                logger.info("Using multicast protocol FIFO");
+                deliverer = new FIFODeliverer();
+            } else {
+                deliverer = new BasicDeliverer();
+            }
+
+
+            new Driver(id, ip, port, deliverer).start();
         } catch(Exception ex) {
             ex.printStackTrace();
             logger.error(ex);

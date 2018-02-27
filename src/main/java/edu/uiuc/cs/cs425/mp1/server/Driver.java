@@ -2,15 +2,16 @@ package edu.uiuc.cs.cs425.mp1.server;
 
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.data.Message;
+import edu.uiuc.cs.cs425.mp1.server.delivery.Deliverer;
 import edu.uiuc.cs.cs425.mp1.util.ServerUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,14 +25,19 @@ public class Driver {
     private int id;
     private String ip;
     private int port;
+    private Deliverer deliverer;
+    private final Pattern unicastPrompt = Pattern.compile("^send ([0-9]) (.*)$");
+    private final Pattern mulitcastPrompt = Pattern.compile("^msend (.*)$");
+    public final static String PROMPT = "> ";
 
     private static final int CONNECTION_RETRY_LIMIT = 3;
     private static final long RETRY_TIMER_MILLIS = 1000;
 
-    public Driver(int id, String ip, int port) {
+    public Driver(int id, String ip, int port, Deliverer deliverer) {
         this.id = id;
         this.ip = ip;
         this.port = port;
+        this.deliverer = deliverer;
     }
 
     public void start() {
@@ -40,8 +46,8 @@ public class Driver {
         listener.start();
 
         // Start deliverer
-        Thread deliverer = new Thread(new Deliverer());
-        deliverer.start();
+        Thread delivererThread = new Thread(deliverer);
+        delivererThread.start();
 
         // CONTINUE on ENTER (for waiting until all processes' listeners are running)
         promptEnterKey();
@@ -53,54 +59,24 @@ public class Driver {
         listenForInput();
 
         // Close threads
-        listener.interrupt();
-        deliverer.interrupt();
-        OperationalStore.INSTANCE.pushToBlockingQueue(null);
-
+        OperationalStore.INSTANCE.pushToBlockingQueue(OperationalStore.INSTANCE.poisonPill);
     }
 
     public void makeSocketConnections() {
         List<Integer> immutableSortedProcIds = Configuration.INSTANCE.getSortedIds();
-        for (int id : ServerUtils.getTargetProcesses(id, immutableSortedProcIds)) {
-            // TODO(avjykmr2): Fix the disgusting syntax below.
-            boolean successfulConnection = tryWithRetries(new ConnectionAttempt() {
-                @Override
-                public void connect() throws IOException {
-                    OperationalStore.INSTANCE.connect(id);
-                    SynchronizedSocket socket = OperationalStore.INSTANCE.getSocket(id);
-                    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                    oos.writeObject(Message.getIdentifierMessage(id));
-                }
-
-                @Override
-                public int id() {
-                    return id;
-                }
-            });
-            if (!successfulConnection) {
-                throw new RuntimeException("Unable to make connections to all other processes");
-            }
-        }
-    }
-
-    public boolean tryWithRetries(ConnectionAttempt connectionAttempt) {
-        int i = 0;
-        for(; i < CONNECTION_RETRY_LIMIT; i++) {
+        for (int destId : ServerUtils.getTargetProcesses(id, immutableSortedProcIds)) {
             try {
-                connectionAttempt.connect();
-                return true;
+                Socket newConnection = Configuration.INSTANCE.createNewSocket(destId);
+                ObjectOutputStream oos = new ObjectOutputStream(newConnection.getOutputStream());
+                oos.writeObject(Message.getIdentifierMessage(id));
+                OperationalStore.INSTANCE.oosMap.put(destId, oos);
+                OperationalStore.INSTANCE.setClientSocket(destId, newConnection);
+                ServerSocketListener.createNewClientSocketListener(newConnection, destId, id);
             } catch (IOException ioEx) {
-                String msg = String.format("Attempt %d: Unable to make connection with %d", i, connectionAttempt.id());
-                logger.error(msg, ioEx);
-                try { Thread.sleep(RETRY_TIMER_MILLIS); } catch (InterruptedException ex) {}
+                logger.error("Failed to make outbound connection to " + destId);
+                throw new RuntimeException("Unable to make connections to all other processes", ioEx);
             }
         }
-        return i != CONNECTION_RETRY_LIMIT;
-    }
-
-    interface ConnectionAttempt {
-        void connect() throws IOException;
-        int id();
     }
 
     private static void promptEnterKey() {
@@ -111,22 +87,57 @@ public class Driver {
 
     private void listenForInput(){
         Scanner scanner = new Scanner(System.in);
-        String input = null;
-        while ((input = scanner.nextLine()) != null){
-            unicastSend(input);
+        String line;
+        final String PROMPT = "> ";
+        System.out.print(PROMPT);
+        while (scanner.hasNextLine()){
+            line = scanner.nextLine();
+            if (line.equalsIgnoreCase("close")) {
+                return;
+            }
+            if (line.startsWith("send")) {
+                Matcher m = unicastPrompt.matcher(line);
+                if (!m.matches()) {
+                    System.out.println("Incorrect syntax, could not send message.");
+                    System.out.print(PROMPT);
+                    continue;
+                }
+                int destId = Integer.parseInt(m.group(1));
+                String msg = m.group(2);
+                unicastSend(msg, destId);
+            } else if (line.startsWith("msend")) {
+                Matcher m = mulitcastPrompt.matcher(line);
+                if (!m.matches()) {
+                    System.out.println("Incorrect syntax, could not send message.");
+                    System.out.print(PROMPT);
+                    continue;
+                }
+                String msg = m.group(1);
+                multicastSend(msg);
+            } else {
+                System.out.println("Unable to recognize given command: " + line);
+                System.out.print(PROMPT);
+            }
+            System.out.print(PROMPT);
         }
     }
 
-    private final Pattern msgPattern = Pattern.compile("^([0-9]) (.*)$");
-    private void unicastSend(String input) {
-        Matcher m = msgPattern.matcher(input);
-        if (!m.matches()) {
-            System.out.println("Incorrect syntax, could not send message.");
-            return;
+    private void multicastSend(String msg) {
+        OperationalStore.INSTANCE.incrementFIFOClock(id);
+        for (Integer destId : Configuration.INSTANCE.getSortedIds()) {
+            if (id != destId) {
+                Message m = Message.getMessage(msg, id, destId, 0);
+                unicastSendHelper(m);
+            }
         }
-        int destId = Integer.parseInt(m.group(1));
-        long networkDelay = 0;
-        Message message = Message.getMessage(m.group(2), id, destId, networkDelay);
+    }
+
+    private void unicastSend(String msg, int destId) {
+        Message m = Message.getMessage(msg, id, destId, 0, true);
+        unicastSendHelper(m);
+    }
+
+    private void unicastSendHelper(Message message) {
         new Thread(new Sender(message)).start();
     }
 

@@ -7,6 +7,7 @@ import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +43,6 @@ public enum Configuration {
             ConfigurationFile configurationFile = gson.fromJson(br, ConfigurationFile.class);
             loadConfigurationFile(configurationFile);
         }
-        OperationalStore.INSTANCE.loadSocketMap();
     }
 
     /**
@@ -91,6 +91,11 @@ public enum Configuration {
         Collections.sort(ids);
         sortedIds = Collections.unmodifiableList(ids);
         sequencerConfig = configFile.getSequencerConfig();
+        OperationalStore.INSTANCE.initFIFOClock();
     }
 
+    public Socket createNewSocket(int id) throws IOException {
+        ServerConfig config = serverConfigs.get(id);
+        return new Socket(config.getIPAddress(), config.getPort());
+    }
 }

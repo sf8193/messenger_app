@@ -6,6 +6,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 
 public class Sender implements Runnable {
 
@@ -27,11 +29,16 @@ public class Sender implements Runnable {
         }
 
         try {
-            SynchronizedSocket socket = OperationalStore.INSTANCE.getSocket(message.getDestId());
-            logger.debug("Socket is empty: " + socket.isEmpty());
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-            oos.writeObject(message);
-            System.out.println("Sent message: " + message);
+            if (message.getSourceId() == message.getDestId()) {
+                System.out.println("Sent message: " + message);
+                OperationalStore.INSTANCE.pushToBlockingQueue(message);
+            } else {
+                ObjectOutputStream oos = OperationalStore.INSTANCE.oosMap.get(message.getDestId());
+                synchronized (oos) {
+                    oos.writeObject(message);
+                    System.out.println("Sent message: " + message);
+                }
+            }
         } catch (IOException ioEx) {
             System.out.println();
             System.out.printf("Message failed to send. Contents below: \n%s\n", message.toString());

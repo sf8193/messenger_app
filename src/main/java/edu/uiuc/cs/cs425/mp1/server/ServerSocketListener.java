@@ -1,12 +1,12 @@
 package edu.uiuc.cs.cs425.mp1.server;
 
-import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.data.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -28,12 +28,8 @@ public class ServerSocketListener implements Runnable {
     private int serverPort;
     // Server socket.
     private ServerSocket serverSocket = null;
-    // Reference to current thread.
-    private Thread runningThread = null;
-    // List of client socket listeners.
-    private volatile List<Thread> clientSocketListeners = new ArrayList<>();
     // Semaphore to await clean exit of all client socket listeners.
-    private final Semaphore semaphore = new Semaphore(0);
+//    private final Semaphore semaphore = new Semaphore(0);
 
     public ServerSocketListener(int id, int port) {
         this.id = id;
@@ -48,27 +44,27 @@ public class ServerSocketListener implements Runnable {
      */
     @Override
     public void run() {
-        synchronized(this) {
-            this.runningThread = Thread.currentThread();
-        }
         openServerSocket();
-        while (!this.runningThread.isInterrupted()) {
+        while (!Thread.currentThread().isInterrupted()) {
             Socket clientSocket = null;
             try {
                 clientSocket = this.serverSocket.accept();
-                ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
-                Message identifier = (Message) objectInputStream.readObject();
+                ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
+                Message identifier = (Message) ois.readObject();
                 int remoteId = identifier.getSourceId();
-                SynchronizedSocket syncSocket = OperationalStore.INSTANCE.getSocket(remoteId);
-                syncSocket.setConnection(clientSocket);
+                if (!OperationalStore.INSTANCE.oosMap.containsKey(remoteId)) {
+                    ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
+                    OperationalStore.INSTANCE.oosMap.put(remoteId, oos);
+                }
+                OperationalStore.INSTANCE.setClientSocket(remoteId, clientSocket);
                 Thread newClientSocketListener = new Thread(
-                        new ClientSocketListener(syncSocket, remoteId, this.id, semaphore));
-                clientSocketListeners.add(newClientSocketListener);
+                        new ClientSocketListener(clientSocket, ois, remoteId, this.id));
+                OperationalStore.INSTANCE.clientSocketListeners.add(newClientSocketListener);
                 newClientSocketListener.start();
             } catch (IOException ioEx) {
-                if (this.runningThread.isInterrupted()) {
+                if (Thread.currentThread().isInterrupted()) {
                     System.out.println("Main listener stopped. Process is no longer accepting connections.");
-                    stop();
+                    closeServerSocket();
                     return;
                 }
                 throw new RuntimeException("Error accepting client connection", ioEx);
@@ -84,16 +80,35 @@ public class ServerSocketListener implements Runnable {
 
     }
 
-    private void stop() {
-        int threadCount = clientSocketListeners.size();
-        for (Thread thread : clientSocketListeners) {
+    public static void createNewClientSocketListener(Socket clientSocket, int remoteId, int sourceId) throws IOException {
+        ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
+        Thread newClientSocketListener = new Thread(
+                new ClientSocketListener(clientSocket, ois, remoteId, sourceId));
+        OperationalStore.INSTANCE.clientSocketListeners.add(newClientSocketListener);
+        newClientSocketListener.start();
+    }
+
+    public void closeServerSocket() {
+        int threadCount = OperationalStore.INSTANCE.clientSocketListeners.size();
+        for (Thread thread : OperationalStore.INSTANCE.clientSocketListeners) {
             thread.interrupt();
         }
-        try {
+
+        for (Map.Entry<Integer, Socket> entry : OperationalStore.INSTANCE.socketMap.entrySet()) {
+            int processId = entry.getKey();
+            Socket clientSocket = entry.getValue();
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                logger.warn("Unable to close socket for processId: " + processId, e);
+            }
+        }
+/*        try {
             semaphore.acquire(threadCount);
         } catch (InterruptedException intEx) {
             logger.error("Unable to wait for all socket listener threads", intEx);
-        }
+        }*/
+
         try {
             this.serverSocket.close();
         } catch (IOException ioEx) {

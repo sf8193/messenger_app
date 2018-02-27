@@ -9,6 +9,16 @@
       "id": "1",
       "ip_address": "127.0.0.1",
       "port": "60001"
+    },
+    {
+      "id": "2",
+      "ip_address": "127.0.0.1",
+      "port": "60002"
+    },
+    {
+      "id": "3",
+      "ip_address": "127.0.0.1",
+      "port": "60003"
     }],
   "sequencer_configuration": {
     "id": "5",
