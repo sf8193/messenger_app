@@ -92,6 +92,7 @@ public enum Configuration {
         sortedIds = Collections.unmodifiableList(ids);
         sequencerConfig = configFile.getSequencerConfig();
         OperationalStore.INSTANCE.initFIFOClock();
+        OperationalStore.INSTANCE.initVectorClock();
     }
 
     public Socket createNewSocket(int id) throws IOException {

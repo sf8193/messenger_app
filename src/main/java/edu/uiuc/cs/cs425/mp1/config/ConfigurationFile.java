@@ -11,10 +11,6 @@ public class ConfigurationFile {
     @SerializedName("server_configurations")
     private ServerConfig[] serverConfigs;
 
-    // Configuration of single sequencer server.
-    @SerializedName("sequencer_configuration")
-    private ServerConfig sequencerConfig = null;
-
     @SerializedName("min_delay")
     private long minDelay;
 
@@ -23,10 +19,6 @@ public class ConfigurationFile {
 
     public ServerConfig[] getServerConfigs() {
         return serverConfigs;
-    }
-
-    public ServerConfig getSequencerConfig() {
-        return sequencerConfig;
     }
 
     public long getMinDelay() {

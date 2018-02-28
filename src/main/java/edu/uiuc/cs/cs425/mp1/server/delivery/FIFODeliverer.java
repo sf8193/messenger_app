@@ -7,13 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class FIFODeliverer extends Deliverer {
 
     private static final Logger logger = LogManager.getLogger(FIFODeliverer.class.getName());
 
-    public final HashMap<Integer, PriorityQueue<Message>> holdbackQueue;
+    private final HashMap<Integer, PriorityQueue<Message>> holdbackQueue;
 
     public FIFODeliverer() {
         holdbackQueue = new HashMap<>();
@@ -26,8 +25,9 @@ public class FIFODeliverer extends Deliverer {
     protected void handleMessage(Message m) {
         if (m.isDirectMessage()) {
             deliverMessage(m);
+            return;
         }
-        int localProcessMessageNumber = OperationalStore.INSTANCE.getProcessMessageNumber(m.getSourceId());
+        int localProcessMessageNumber = OperationalStore.INSTANCE.getFIFOProcessMessageNumber(m.getSourceId());
         if (m.getProcessMessageNumber() == localProcessMessageNumber + 1) {
             // Message is received in correct order. Deliver.
             deliverMessage(m);

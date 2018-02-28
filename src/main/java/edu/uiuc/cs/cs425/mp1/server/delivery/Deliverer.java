@@ -35,6 +35,5 @@ public abstract class Deliverer implements Runnable {
 
     protected void deliverMessage(Message m) {
         System.out.println("Received message: " + m);
-        System.out.print(Driver.PROMPT);
     }
 }

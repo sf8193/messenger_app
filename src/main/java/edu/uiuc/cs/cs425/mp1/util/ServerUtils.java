@@ -2,6 +2,7 @@ package edu.uiuc.cs.cs425.mp1.util;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class ServerUtils {
 
@@ -15,6 +16,10 @@ public class ServerUtils {
             return ids.subList(index + 1, ids.size());
         }
         return Collections.emptyList();
+    }
+
+    public static void incrementMap(int key, Map<Integer, Integer> map) {
+        map.put(key, map.get(key) + 1);
     }
 
 }

@@ -5,9 +5,7 @@ import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.config.ServerConfig;
 import edu.uiuc.cs.cs425.mp1.server.Driver;
 import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
-import edu.uiuc.cs.cs425.mp1.server.delivery.BasicDeliverer;
-import edu.uiuc.cs.cs425.mp1.server.delivery.Deliverer;
-import edu.uiuc.cs.cs425.mp1.server.delivery.FIFODeliverer;
+import edu.uiuc.cs.cs425.mp1.server.delivery.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -36,15 +34,26 @@ public class DriverMain {
             String ip = config.getIPAddress();
             int port = config.getPort();
 
+            if (parserModule.isSequencer()) {
+                // Launch sequencer
+                logger.info("Running as sequencer node");
+                return;
+            }
+
             Deliverer deliverer;
 
             if (parserModule.getMulticastProtocol().equals("FIFO")) {
                 logger.info("Using multicast protocol FIFO");
                 deliverer = new FIFODeliverer();
+            } else if (parserModule.getMulticastProtocol().equalsIgnoreCase("causal")) {
+                logger.info("Using multicast protocol Causal Ordering");
+                deliverer = new CausalDeliverer();
+            } else if (parserModule.getMulticastProtocol().equalsIgnoreCase("total")) {
+                logger.info("Using multicast protocol Total Ordering");
+                deliverer = new TODeliverer();
             } else {
                 deliverer = new BasicDeliverer();
             }
-
 
             new Driver(id, ip, port, deliverer).start();
         } catch(Exception ex) {

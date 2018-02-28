@@ -2,6 +2,7 @@ package edu.uiuc.cs.cs425.mp1.server;
 
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.data.Message;
+import edu.uiuc.cs.cs425.mp1.data.MessageFactory;
 import edu.uiuc.cs.cs425.mp1.server.delivery.Deliverer;
 import edu.uiuc.cs.cs425.mp1.util.ServerUtils;
 import org.apache.logging.log4j.LogManager;
@@ -26,12 +27,10 @@ public class Driver {
     private String ip;
     private int port;
     private Deliverer deliverer;
-    private final Pattern unicastPrompt = Pattern.compile("^send ([0-9]) (.*)$");
-    private final Pattern mulitcastPrompt = Pattern.compile("^msend (.*)$");
-    public final static String PROMPT = "> ";
 
-    private static final int CONNECTION_RETRY_LIMIT = 3;
-    private static final long RETRY_TIMER_MILLIS = 1000;
+    private final Pattern unicastPrompt = Pattern.compile("^send ([0-9]) (.*)$");
+    private final Pattern multicastPrompt = Pattern.compile("^msend (.*)$");
+    public final static String PROMPT = "> ";
 
     public Driver(int id, String ip, int port, Deliverer deliverer) {
         this.id = id;
@@ -62,21 +61,25 @@ public class Driver {
         OperationalStore.INSTANCE.pushToBlockingQueue(OperationalStore.INSTANCE.poisonPill);
     }
 
-    public void makeSocketConnections() {
+    private void makeSocketConnections() {
         List<Integer> immutableSortedProcIds = Configuration.INSTANCE.getSortedIds();
         for (int destId : ServerUtils.getTargetProcesses(id, immutableSortedProcIds)) {
             try {
-                Socket newConnection = Configuration.INSTANCE.createNewSocket(destId);
-                ObjectOutputStream oos = new ObjectOutputStream(newConnection.getOutputStream());
-                oos.writeObject(Message.getIdentifierMessage(id));
-                OperationalStore.INSTANCE.oosMap.put(destId, oos);
-                OperationalStore.INSTANCE.setClientSocket(destId, newConnection);
-                ServerSocketListener.createNewClientSocketListener(newConnection, destId, id);
+                makeConnection(destId);
             } catch (IOException ioEx) {
                 logger.error("Failed to make outbound connection to " + destId);
                 throw new RuntimeException("Unable to make connections to all other processes", ioEx);
             }
         }
+    }
+
+    private void makeConnection(int destId) throws IOException {
+        Socket newConnection = Configuration.INSTANCE.createNewSocket(destId);
+        ObjectOutputStream oos = new ObjectOutputStream(newConnection.getOutputStream());
+        oos.writeObject(MessageFactory.createIdentifierMessage(id));
+        OperationalStore.INSTANCE.oosMap.put(destId, oos);
+        OperationalStore.INSTANCE.setClientSocket(destId, newConnection);
+        ServerSocketListener.createNewClientSocketListener(newConnection, destId, id);
     }
 
     private static void promptEnterKey() {
@@ -85,14 +88,15 @@ public class Driver {
         scanner.nextLine();
     }
 
-    private void listenForInput(){
+    protected void listenForInput(){
         Scanner scanner = new Scanner(System.in);
         String line;
         final String PROMPT = "> ";
         System.out.print(PROMPT);
         while (scanner.hasNextLine()){
             line = scanner.nextLine();
-            if (line.equalsIgnoreCase("close")) {
+            if (line.equalsIgnoreCase("exit")) {
+                System.out.println("Closing node...");
                 return;
             }
             if (line.startsWith("send")) {
@@ -106,7 +110,7 @@ public class Driver {
                 String msg = m.group(2);
                 unicastSend(msg, destId);
             } else if (line.startsWith("msend")) {
-                Matcher m = mulitcastPrompt.matcher(line);
+                Matcher m = multicastPrompt.matcher(line);
                 if (!m.matches()) {
                     System.out.println("Incorrect syntax, could not send message.");
                     System.out.print(PROMPT);
@@ -124,16 +128,16 @@ public class Driver {
 
     private void multicastSend(String msg) {
         OperationalStore.INSTANCE.incrementFIFOClock(id);
+        OperationalStore.INSTANCE.incrementVectorClock(id);
+        int messageId = MessageFactory.getMessageId(id);
         for (Integer destId : Configuration.INSTANCE.getSortedIds()) {
-            if (id != destId) {
-                Message m = Message.getMessage(msg, id, destId, 0);
-                unicastSendHelper(m);
-            }
+            Message m = MessageFactory.createMessage(messageId, msg, id, destId, 0);
+            unicastSendHelper(m);
         }
     }
 
     private void unicastSend(String msg, int destId) {
-        Message m = Message.getMessage(msg, id, destId, 0, true);
+        Message m = MessageFactory.createMessage(MessageFactory.getMessageId(id), msg, id, destId, 0, true);
         unicastSendHelper(m);
     }
 
