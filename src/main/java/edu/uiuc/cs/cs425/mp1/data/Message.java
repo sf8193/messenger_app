@@ -114,14 +114,6 @@ public class Message implements Serializable {
 
     }
 
-    public static Message getSequencerMessage(Message orig, int sequencerOrder) {
-        Message message = new Message(orig);
-        message.directMessage = false;
-        message.sequencerOrder = sequencerOrder;
-        message.sequencerMessage = true;
-        return message;
-    }
-
     public static Message timestampMessage(Message orig) {
         Message message = new Message(orig);
         message.timestamp = System.currentTimeMillis();

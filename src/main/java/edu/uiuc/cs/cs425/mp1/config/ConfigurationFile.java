@@ -12,20 +12,20 @@ public class ConfigurationFile {
     private ServerConfig[] serverConfigs;
 
     @SerializedName("min_delay")
-    private long minDelay;
+    private int minDelay;
 
     @SerializedName("max_delay")
-    private long maxDelay;
+    private int maxDelay;
 
     public ServerConfig[] getServerConfigs() {
         return serverConfigs;
     }
 
-    public long getMinDelay() {
+    public int getMinDelay() {
         return minDelay;
     }
 
-    public long getMaxDelay() {
+    public int getMaxDelay() {
         return maxDelay;
     }
 }

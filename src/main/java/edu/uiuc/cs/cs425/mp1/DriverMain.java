@@ -4,12 +4,10 @@ import com.beust.jcommander.JCommander;
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.config.ServerConfig;
 import edu.uiuc.cs.cs425.mp1.server.Driver;
-import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
+import edu.uiuc.cs.cs425.mp1.server.SequencerDriver;
 import edu.uiuc.cs.cs425.mp1.server.delivery.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Scanner;
 
 /**
  *  Launches main process driver program.
@@ -37,6 +35,7 @@ public class DriverMain {
             if (parserModule.isSequencer()) {
                 // Launch sequencer
                 logger.info("Running as sequencer node");
+                new SequencerDriver(id, ip, port, new SequencerDeliverer(id)).start();
                 return;
             }
 

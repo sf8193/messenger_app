@@ -28,7 +28,6 @@ public class CausalDeliverer extends Deliverer {
                 deliverMessage(m);
                 // Update local registry.
                 incrementMap(m.getSourceId(), currentVectorClock);
-                OperationalStore.INSTANCE.incrementVectorClock(m.getSourceId());
                 // check for local messages available to deliver.
                 deliverPendingLocalMessages(currentVectorClock);
                 OperationalStore.INSTANCE.updateVectorClock(currentVectorClock);

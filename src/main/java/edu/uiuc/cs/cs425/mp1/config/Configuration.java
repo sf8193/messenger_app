@@ -26,12 +26,10 @@ public enum Configuration {
     private final Map<Integer, ServerConfig> serverConfigs = new ConcurrentHashMap<>();
     // Immutable and sorted (ascending) list of process ids.
     private volatile List<Integer> sortedIds;
-    // Configuration for sequencer process.
-    private volatile ServerConfig sequencerConfig;
     // Minimum message delay
-    long minDelay;
+    int minDelay;
     // Maximum message delay;
-    long maxDelay;
+    int maxDelay;
 
     /**
      * Parse configuration file into memory.
@@ -58,23 +56,12 @@ public enum Configuration {
 
     public List<Integer> getSortedIds() { return sortedIds; }
 
-    public long getMinDelay() {
+    public int getMinDelay() {
         return minDelay;
     }
 
-    public long getMaxDelay() {
+    public int getMaxDelay() {
         return maxDelay;
-    }
-
-    public int getId(String host, int port) {
-        for (Map.Entry<Integer, ServerConfig> entry: serverConfigs.entrySet()) {
-            ServerConfig serverConfig = entry.getValue();
-            if (serverConfig.getIPAddress().equals(host) && serverConfig.getPort() == port) {
-                return entry.getKey();
-            }
-        }
-        String msg = String.format("No such ip and port entry exists in the configuration: (%s,%d)", host, port);
-        throw new NoSuchElementException(msg);
     }
 
     private void loadConfigurationFile(ConfigurationFile configFile) {
@@ -90,7 +77,6 @@ public enum Configuration {
         }
         Collections.sort(ids);
         sortedIds = Collections.unmodifiableList(ids);
-        sequencerConfig = configFile.getSequencerConfig();
         OperationalStore.INSTANCE.initFIFOClock();
         OperationalStore.INSTANCE.initVectorClock();
     }

@@ -24,7 +24,7 @@ public class TODeliverer extends Deliverer {
             }
         } else { // Regular message
             holdbackQueue.addMessage(m);
-            if (m.getMessageId() == holdbackQueue.peekOrdering().getMessageId()) {
+            if (!holdbackQueue.noOrderings() && m.getMessageId() == holdbackQueue.peekOrdering().getMessageId()) {
                 deliverPendingLocalMessages();
             }
         }

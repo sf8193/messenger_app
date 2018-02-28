@@ -131,13 +131,13 @@ public class Driver {
         OperationalStore.INSTANCE.incrementVectorClock(id);
         int messageId = MessageFactory.getMessageId(id);
         for (Integer destId : Configuration.INSTANCE.getSortedIds()) {
-            Message m = MessageFactory.createMessage(messageId, msg, id, destId, 0);
+            Message m = MessageFactory.createMessage(messageId, msg, id, destId);
             unicastSendHelper(m);
         }
     }
 
     private void unicastSend(String msg, int destId) {
-        Message m = MessageFactory.createMessage(MessageFactory.getMessageId(id), msg, id, destId, 0, true);
+        Message m = MessageFactory.createMessage(MessageFactory.getMessageId(id), msg, id, destId,true);
         unicastSendHelper(m);
     }
 

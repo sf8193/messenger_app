@@ -2,6 +2,7 @@ package edu.uiuc.cs.cs425.mp1.data;
 
 import edu.uiuc.cs.cs425.mp1.config.Configuration;
 import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
+import edu.uiuc.cs.cs425.mp1.util.ServerUtils;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,29 +28,40 @@ public class MessageFactory {
         return id + numberOfProcesses * messageCounter.getAndIncrement();
     }
 
-    public static Message createMessage(int messageId, String message, int sourceId, int destId, long networkDelay) {
-        return createMessage(messageId, message, sourceId, destId, networkDelay, false);
+    private static Message baseCreateMessage(int messageId, String message, int sourceId, int destId,
+                                             int processMessageNumber, Map<Integer, Integer> vectorTimestamp,
+                                             boolean directMessage, int sequencerOrder, boolean isSequencerMessage) {
+        long currentTime = System.currentTimeMillis();
+        int networkDelay = ServerUtils.getRandomNetworkDelay();
+        return new Message(messageId, message, sourceId, destId, currentTime, networkDelay,
+                processMessageNumber, vectorTimestamp, directMessage, sequencerOrder, isSequencerMessage);
+
+    }
+
+    public static Message createMessage(int messageId, String message, int sourceId, int destId) {
+        return createMessage(messageId, message, sourceId, destId, false);
     }
 
     public static Message createMessage(int messageId, String message, int sourceId, int destId,
-                                        long networkDelay, boolean directMessage) {
-        return createMessage(messageId, message, sourceId, destId, networkDelay, directMessage, -1, false);
+                                        boolean directMessage) {
+        return createMessage(messageId, message, sourceId, destId, directMessage, -1, false);
     }
 
-    public static Message createMessage(int messageId, String message, int sourceId, int destId, long networkDelay,
+    public static Message createMessage(int messageId, String message, int sourceId, int destId,
                                         boolean directMessage, int sequencerOrder, boolean sequencerMessage) {
-        long currentTime = System.currentTimeMillis();
-        return new Message(messageId, message, sourceId, destId, currentTime,
-                networkDelay,
-                OperationalStore
-                .INSTANCE.fifoClock
-                .get(sourceId), OperationalStore.INSTANCE.vectorClock, directMessage, sequencerOrder,
-                sequencerMessage);
+        return baseCreateMessage(messageId, message, sourceId, destId,
+                OperationalStore.INSTANCE.fifoClock.get(sourceId), OperationalStore.INSTANCE.vectorClock,
+                directMessage, sequencerOrder, sequencerMessage);
+    }
+
+    public static Message createSequencerMessage(int messageId, String message, int sourceId, int destId, int sequencerOrder) {
+        return baseCreateMessage(messageId, message, sourceId, destId, -1, Map.of(),
+                false, sequencerOrder, true);
     }
 
     public static Message createIdentifierMessage(int sourceId) {
-        return new Message(getMessageId(sourceId),"", sourceId, -1, -1, -1, -1,
-                Map.of(),true, -1, false);
+        return baseCreateMessage(getMessageId(sourceId),"IDENTIFIER_MSG", sourceId, -1,
+                -1, Map.of(), true,-1,false);
     }
 
 }

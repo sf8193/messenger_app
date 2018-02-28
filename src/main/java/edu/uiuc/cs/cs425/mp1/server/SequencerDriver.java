@@ -16,7 +16,7 @@ public class SequencerDriver extends Driver {
         Scanner scanner = new Scanner(System.in);
         String line;
         final String PROMPT = "> ";
-        System.out.print("PROMPT");
+        System.out.print(PROMPT);
         while(scanner.hasNextLine()) {
             line = scanner.nextLine();
             if (line.trim().equalsIgnoreCase("exit")) {
