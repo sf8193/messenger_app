@@ -8,6 +8,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
+/**
+ * class that handles Causally ordered messages
+ */
 public class CausalDeliverer extends Deliverer {
 
     private static final Logger logger = LogManager.getLogger(CausalDeliverer.class.getName());
@@ -22,7 +25,9 @@ public class CausalDeliverer extends Deliverer {
                 return;
             }
 
+            //get vector clock from shared memory
             Map<Integer, Integer> currentVectorClock = OperationalStore.INSTANCE.getVectorClock();
+            //check if ready for delivery
             if (isReadyForCODelivery(m.getSourceId(), m.getVectorTimestamp(), currentVectorClock)) {
                 // Message is received in correct order. Deliver.
                 deliverMessage(m);
@@ -37,6 +42,13 @@ public class CausalDeliverer extends Deliverer {
         }
     }
 
+    /**
+     *
+     * @param sourceId
+     * @param messageClock
+     * @param currentVectorClock
+     * @return whether message can be delivered or not
+     */
     private boolean isReadyForCODelivery(int sourceId, Map<Integer, Integer> messageClock,
                                          Map<Integer, Integer> currentVectorClock) {
 
@@ -54,11 +66,17 @@ public class CausalDeliverer extends Deliverer {
 
     }
 
+    /**
+     * deliver pending local messages
+     * @param currentVectorClock
+     */
+
     private void deliverPendingLocalMessages(Map<Integer, Integer> currentVectorClock) {
 
         Iterator<Message> holdbackQueueIter = holdbackQueue.iterator();
         while(holdbackQueueIter.hasNext()) {
             Message m = holdbackQueueIter.next();
+            //TODO: don't think we need this check for readiness since we check before this function
             if (isReadyForCODelivery(m.getSourceId(), m.getVectorTimestamp(), currentVectorClock)) {
                 deliverMessage(m);
                 holdbackQueueIter.remove();

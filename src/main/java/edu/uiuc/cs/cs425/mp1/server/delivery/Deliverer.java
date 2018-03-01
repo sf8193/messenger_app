@@ -9,6 +9,10 @@ import org.apache.logging.log4j.Logger;
 /**
  * Interface defining
  */
+
+/**
+ * parent class that delivers messages
+ */
 public abstract class Deliverer implements Runnable {
 
     private static final Logger logger = LogManager.getLogger(BasicDeliverer.class.getName());

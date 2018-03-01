@@ -73,6 +73,11 @@ public class Driver {
         }
     }
 
+    /**
+     * makes connection to parameter and maps it in shared memory
+     * @param destId
+     * @throws IOException
+     */
     private void makeConnection(int destId) throws IOException {
         Socket newConnection = Configuration.INSTANCE.createNewSocket(destId);
         ObjectOutputStream oos = new ObjectOutputStream(newConnection.getOutputStream());
@@ -125,6 +130,11 @@ public class Driver {
             System.out.print(PROMPT);
         }
     }
+
+    /**
+     * multicast send and update vector clock
+     * @param msg
+     */
 
     private void multicastSend(String msg) {
         OperationalStore.INSTANCE.incrementFIFOClock(id);

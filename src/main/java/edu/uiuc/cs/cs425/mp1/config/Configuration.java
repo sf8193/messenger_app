@@ -64,6 +64,11 @@ public enum Configuration {
         return maxDelay;
     }
 
+    /**
+     * load important parts of config file into memory
+     * @param configFile
+     */
+
     private void loadConfigurationFile(ConfigurationFile configFile) {
 
         minDelay = configFile.getMinDelay();
@@ -80,6 +85,13 @@ public enum Configuration {
         OperationalStore.INSTANCE.initFIFOClock();
         OperationalStore.INSTANCE.initVectorClock();
     }
+
+    /**
+     *
+     * @param id
+     * @return socket with specified ip and port
+     * @throws IOException
+     */
 
     public Socket createNewSocket(int id) throws IOException {
         ServerConfig config = serverConfigs.get(id);

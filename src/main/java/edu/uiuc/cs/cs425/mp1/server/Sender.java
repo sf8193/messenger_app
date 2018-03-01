@@ -9,6 +9,9 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+/**
+ * helper thread that sends message by figuring out who needs to get the message from shared memory
+ */
 public class Sender implements Runnable {
 
     private static final Logger logger = LogManager.getLogger(ClientSocketListener.class.getName());

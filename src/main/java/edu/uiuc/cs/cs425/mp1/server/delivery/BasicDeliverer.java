@@ -5,6 +5,9 @@ import edu.uiuc.cs.cs425.mp1.server.OperationalStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * sends no ordering messages
+ */
 public class BasicDeliverer extends Deliverer {
 
     private static final Logger logger = LogManager.getLogger(BasicDeliverer.class.getName());

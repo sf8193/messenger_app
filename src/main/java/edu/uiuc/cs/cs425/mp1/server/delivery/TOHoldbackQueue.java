@@ -4,10 +4,16 @@ import edu.uiuc.cs.cs425.mp1.data.Message;
 
 import java.util.*;
 
+/**
+ * wrapper for things needed for totally ordered algo
+ */
+
 public class TOHoldbackQueue {
 
+    //map id to message
     private HashMap<Integer, Message> storedMessages;
     private PriorityQueue<Message> sequencerOrderings;
+    //store messages in proper order to be sent out
 
     public TOHoldbackQueue() {
         storedMessages = new HashMap<>();
@@ -46,6 +52,7 @@ public class TOHoldbackQueue {
         return storedMessages.containsKey(messageId);
     }
 
+    //makes sure that messages are in proper order to be sent out
     class SequenceMessageComparator implements Comparator<Message> {
 
         @Override

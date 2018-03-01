@@ -52,6 +52,7 @@ public class ServerSocketListener implements Runnable {
                 ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
                 Message identifier = (Message) ois.readObject();
                 int remoteId = identifier.getSourceId();
+                //TODO: do we need this since we map them upon making a connection?
                 if (!OperationalStore.INSTANCE.oosMap.containsKey(remoteId)) {
                     ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
                     OperationalStore.INSTANCE.oosMap.put(remoteId, oos);

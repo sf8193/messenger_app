@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Message class that contains all data important to message
+ */
 public class Message implements Serializable {
 
     private int messageId;

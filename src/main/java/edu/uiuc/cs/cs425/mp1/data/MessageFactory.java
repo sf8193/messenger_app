@@ -6,6 +6,9 @@ import edu.uiuc.cs.cs425.mp1.util.ServerUtils;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+/**
+factory class that creates message depending on what type of message it is
+ */
 
 public class MessageFactory {
 

@@ -12,6 +12,7 @@ public class SequencerDeliverer extends Deliverer {
 
     private int id;
     private int localCounter = 0;
+    //TODO: why do we need this local counter?
     //private Map<Integer, Integer> messageOrderMap = new HashMap<>();
     private final String SEQUENCER_MSG_STRING = "SEQUENCER MSG";
 
@@ -38,6 +39,10 @@ public class SequencerDeliverer extends Deliverer {
         localCounter++;
     }
 
+    /**
+     * send multicast message to everyone
+     * @param messageId
+     */
     private void multicastSequencerMessages(int messageId) {
         for (Integer destId : Configuration.INSTANCE.getSortedIds()) {
             if (id != destId) {

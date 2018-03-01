@@ -4,6 +4,9 @@ import edu.uiuc.cs.cs425.mp1.data.Message;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * class that handles Causally ordered messages
+ */
 public class TODeliverer extends Deliverer {
 
     private TOHoldbackQueue holdbackQueue = new TOHoldbackQueue();
@@ -24,6 +27,7 @@ public class TODeliverer extends Deliverer {
             }
         } else { // Regular message
             holdbackQueue.addMessage(m);
+            //if message is top of priority queue send
             if (!holdbackQueue.noOrderings() && m.getMessageId() == holdbackQueue.peekOrdering().getMessageId()) {
                 deliverPendingLocalMessages();
             }
